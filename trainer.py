@@ -126,4 +126,6 @@ class ValidEpoch(Epoch):
         with torch.no_grad():
             prediction = self.model.forward(x)
             loss = self.loss(prediction, y)
+            if self.device =='cuda':
+                loss = loss.sum()
         return loss, prediction
