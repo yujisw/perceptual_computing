@@ -31,6 +31,7 @@ You can download dataset with kaggle API. Before downloading it, you should move
 cd dataset
 kaggle competitions download -c understanding_cloud_organization
 ```
+If the dataset is not in `dataset` directory, you should change `path` in train.py Line 27.
 
 ### Cautions
 When you can use GPU, this scripts use multiple GPUs automatically.
