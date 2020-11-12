@@ -15,6 +15,7 @@ scikit-learn = "*"
 opencv-contrib-python = "*"
 albumentations = "*"
 segmentation-models-pytorch = "*"
+wandb = "*"
 
 [dev-packages]
 

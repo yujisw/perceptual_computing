@@ -18,8 +18,9 @@ class Epoch:
     def _to_device(self):
         if self.device == 'cuda':
             self.model = torch.nn.DataParallel(self.model).to(self.device)
+            loss_name = self.loss.__name__
             self.loss = torch.nn.DataParallel(self.loss).to(self.device)
-            self.loss.__name__ = 'BCEDiceLoss'  # TODOこれを入れないとなんかエラー起きる
+            self.loss.__name__ = loss_name
             for metric in self.metrics:
                 metric = torch.nn.DataParallel(metric).to(self.device)
         else:

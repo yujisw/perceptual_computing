@@ -13,11 +13,16 @@ import albumentations as albu
 from albumentations import pytorch as AT
 import segmentation_models_pytorch as smp
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import wandb
+import time
 
 from dataset import CloudDataset
 import utils
-from loss import BCEDiceLoss
+from loss import BCEDiceLoss, DiceLoss
 from trainer import TrainEpoch, ValidEpoch
+
+exp_name = time.strftime('%Y%m%d-%H%M%S')
+wandb.init(project="perceptual_computing", entity='yujisw', name=exp_name)
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("Using", DEVICE)
@@ -75,8 +80,9 @@ model = smp.Unet(
     classes=4, 
     activation=ACTIVATION,
 )
+wandb.watch(model)
 
-num_epochs = 3
+num_epochs = 100
 logdir = "./logs/segmentation"
 
 # model, criterion, optimizer
@@ -85,10 +91,10 @@ optimizer = torch.optim.Adam([
     {'params': model.encoder.parameters(), 'lr': 1e-3},  
 ])
 scheduler = ReduceLROnPlateau(optimizer, factor=0.15, patience=2)
-loss = BCEDiceLoss()
-loss.__name__ = "BCEDiceLoss" # TODOこれを入れないとなんかエラー起きる
+loss = BCEDiceLoss() # or DiceLoss()
 metrics = [
-    smp.utils.metrics.IoU(threshold=0.5),
+    smp.utils.metrics.Fscore(threshold=0.5), # Fscore means Dice Coefficient
+    smp.utils.metrics.IoU(threshold=0.5), # IoU means Jaccord Coefficient
 ]
 
 train_epoch = TrainEpoch(
@@ -121,12 +127,27 @@ for i in range(0, num_epochs):
     # do something (save model, change lr, etc.)
     if max_score < valid_logs['iou_score']:
         max_score = valid_logs['iou_score']
-        torch.save(model, './best_model.pth')
+        torch.save(model, './best_iou_model.pth')
+        print('Model saved!')
+
+    if max_score < valid_logs['fscore']:
+        max_score = valid_logs['fscore']
+        torch.save(model, './best_dice_model.pth')
         print('Model saved!')
         
     if i % 1 == 0:
         optimizer.param_groups[0]['lr'] = 1e-5
         print('Decrease decoder learning rate to 1e-5!')
+
+    wandb.log({
+        "Train Loss": train_logs[loss.__name__],
+        "Train IOU": train_logs['iou_score'],
+        "Train Dice": train_logs['fscore'],
+        "Valid Loss": valid_logs[loss.__name__],
+        "Valid IOU": valid_logs['iou_score'],
+        "Valid Dice": valid_logs['fscore'],
+        "max_score": max_score,
+        })
 
 print("training ends.")
 print('max_score:', max_score)
