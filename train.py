@@ -74,7 +74,7 @@ loaders = {
 print("setting for training...")
 
 ACTIVATION = None
-model = smp.Unet(
+model = smp.DeepLabV3Plus(
     encoder_name=ENCODER, 
     encoder_weights=ENCODER_WEIGHTS, 
     classes=4, 
