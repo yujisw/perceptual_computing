@@ -82,7 +82,7 @@ model = smp.DeepLabV3Plus(
 )
 wandb.watch(model)
 
-num_epochs = 100
+num_epochs = 150
 logdir = "./logs/segmentation"
 
 # model, criterion, optimizer
@@ -135,9 +135,9 @@ for i in range(0, num_epochs):
         torch.save(model, './best_dice_model.pth')
         print('Model saved!')
         
-    if i % 1 == 0:
-        optimizer.param_groups[0]['lr'] = 1e-5
-        print('Decrease decoder learning rate to 1e-5!')
+    # if i % 1 == 0:
+    #     optimizer.param_groups[0]['lr'] = 1e-5
+    #     print('Decrease decoder learning rate to 1e-5!')
 
     wandb.log({
         "Train Loss": train_logs[loss.__name__],
