@@ -15,6 +15,7 @@ import segmentation_models_pytorch as smp
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import wandb
 import time
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 from dataset import CloudDataset
 import utils
@@ -29,7 +30,7 @@ print("Using", DEVICE)
 
 print("preparing data...")
 
-path = './dataset/'
+path = '/mnt/aoni04/saijo/PIS/input/understanding_cloud_organization'
 train = pd.read_csv(f'{path}/train.csv')
 sub = pd.read_csv(f'{path}/sample_submission.csv')
 
@@ -58,7 +59,7 @@ preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 print("creating data loader...")
 
 num_workers = 0
-bs = 16
+bs = 4
 
 train_dataset = CloudDataset(path = path, df=train, datatype='train', img_ids=train_ids, transforms = utils.get_training_augmentation(), preprocessing = utils.get_preprocessing(preprocessing_fn))
 valid_dataset = CloudDataset(path = path, df=train, datatype='valid', img_ids=valid_ids, transforms = utils.get_validation_augmentation(), preprocessing = utils.get_preprocessing(preprocessing_fn))
@@ -74,15 +75,28 @@ loaders = {
 print("setting for training...")
 
 ACTIVATION = None
-model = smp.Unet(
-    encoder_name=ENCODER, 
-    encoder_weights=ENCODER_WEIGHTS, 
-    classes=4, 
-    activation=ACTIVATION,
-)
+
+MODELNAME = 'PSPNet'
+if MODELNAME=='PSPNet':
+    print("model build: PSPNet")
+    model = smp.PSPNet(
+        encoder_name=ENCODER, 
+        encoder_weights=ENCODER_WEIGHTS, 
+        classes=4, 
+        activation=ACTIVATION,
+    )
+else:
+    print("model build: Unet")
+    model = smp.Unet(
+        encoder_name=ENCODER, 
+        encoder_weights=ENCODER_WEIGHTS, 
+        classes=4, 
+        activation=ACTIVATION,
+    )
+
 wandb.watch(model)
 
-num_epochs = 100
+num_epochs = 150
 logdir = "./logs/segmentation"
 
 # model, criterion, optimizer
@@ -127,12 +141,12 @@ for i in range(0, num_epochs):
     # do something (save model, change lr, etc.)
     if max_score < valid_logs['iou_score']:
         max_score = valid_logs['iou_score']
-        torch.save(model, './best_iou_model.pth')
+        torch.save(model, './weights/{}/best_iou_model.pth'.format(MODELNAME))
         print('Model saved!')
 
     if max_score < valid_logs['fscore']:
         max_score = valid_logs['fscore']
-        torch.save(model, './best_dice_model.pth')
+        torch.save(model, './weights/{}/best_dice_model.pth'.format(MODELNAME))
         print('Model saved!')
         
     if i % 1 == 0:
