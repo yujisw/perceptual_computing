@@ -1,6 +1,7 @@
 import albumentations as albu
 import pandas as pd
 import numpy as np
+import cv2
 
 def rle_decode(mask_rle: str = '', shape: tuple = (1400, 2100)):
     '''
@@ -21,12 +22,11 @@ def rle_decode(mask_rle: str = '', shape: tuple = (1400, 2100)):
 
 def get_training_augmentation():
     train_transform = [
-
+        albu.Resize(320, 640),
         albu.HorizontalFlip(p=0.5),
         albu.ShiftScaleRotate(scale_limit=0.5, rotate_limit=0, shift_limit=0.1, p=0.5, border_mode=0),
         albu.GridDistortion(p=0.5),
-        albu.OpticalDistortion(p=0.5, distort_limit=2, shift_limit=0.5),
-        albu.Resize(320, 640)
+        # albu.OpticalDistortion(p=0.5, distort_limit=2, shift_limit=0.5),
     ]
     return albu.Compose(train_transform)
 
@@ -84,3 +84,32 @@ def make_mask(df: pd.DataFrame, image_name: str='img.jpg', shape: tuple = (1400,
             masks[:, :, idx] = mask
             
     return masks
+
+def mask2rle(img):
+    '''
+    Convert mask to rle.
+    img: numpy array, 1 - mask, 0 - background
+    Returns run length as string formated
+    '''
+    pixels= img.T.flatten()
+    pixels = np.concatenate([[0], pixels, [0]])
+    runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
+    runs[1::2] -= runs[::2]
+    return ' '.join(str(x) for x in runs)
+
+def post_process(probability, threshold, min_size):
+    """
+    Post processing of each predicted mask, components with lesser number of pixels
+    than `min_size` are ignored
+    """
+    # don't remember where I saw it
+    mask = cv2.threshold(probability, threshold, 1, cv2.THRESH_BINARY)[1]
+    num_component, component = cv2.connectedComponents(mask.astype(np.uint8))
+    predictions = np.zeros((350, 525), np.float32)
+    num = 0
+    for c in range(1, num_component):
+        p = (component == c)
+        if p.sum() > min_size:
+            predictions[p] = 1
+            num += 1
+    return predictions, num
