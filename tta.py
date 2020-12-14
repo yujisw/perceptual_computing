@@ -19,7 +19,7 @@ import time
 from dataset import CloudDataset
 import utils
 from loss import BCEDiceLoss, DiceLoss
-from trainer import TrainEpoch, ValidEpoch, , TTAEpoch
+from trainer import TrainEpoch, ValidEpoch, TTAEpoch
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("Using", DEVICE)
@@ -96,13 +96,13 @@ tta_epoch = TTAEpoch(
 
 print("start predicting!")
     
-train_logs = valid_epoch.run(train_loader)
+# train_logs = valid_epoch.run(train_loader)
 valid_logs = valid_epoch.run(valid_loader)
 tta_logs = tta_epoch.run(valid_loader)
 
 print("predicting ends.")
-print('Train IoU Score: ', train_logs['iou_score'])
-print('Train Dice Score:', train_logs['fscore'])
+# print('Train IoU Score: ', train_logs['iou_score'])
+# print('Train Dice Score:', train_logs['fscore'])
 print('Valid IoU Score: ', valid_logs['iou_score'])
 print('Valid Dice Score:', valid_logs['fscore'])
 print('TTA IoU Score: ', tta_logs['iou_score'])
