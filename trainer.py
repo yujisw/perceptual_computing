@@ -130,3 +130,36 @@ class ValidEpoch(Epoch):
             if self.device =='cuda':
                 loss = loss.sum()
         return loss, prediction
+    
+
+class TTAEpoch(Epoch):
+
+    def __init__(self, model, loss, metrics, device='cpu', verbose=True):
+        super().__init__(
+            model=model,
+            loss=loss,
+            metrics=metrics,
+            stage_name='valid',
+            device=device,
+            verbose=verbose,
+        )
+
+    def on_epoch_start(self):
+        self.model.eval()
+        
+    def flip(self, x, axis):
+        pred = self.model.forward(x.flip(axis).to(self.device))
+        return pred.flip(axis)
+
+    def batch_update(self, x, y):
+        with torch.no_grad():
+            pred1 = self.model.forward(x)
+            pred2 = self.flip(x, 2)
+            pred3 = self.flip(x, 3)
+            prediction = (pred1+pred2+pred3)/3.0
+            loss = self.loss(prediction, y)
+            if self.device =='cuda':
+                loss = loss.sum()
+        return loss, prediction
+
+
