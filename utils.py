@@ -22,11 +22,23 @@ def rle_decode(mask_rle: str = '', shape: tuple = (1400, 2100)):
 
 def get_training_augmentation():
     train_transform = [
-        albu.Resize(320, 640),
-        albu.HorizontalFlip(p=0.5),
-        albu.ShiftScaleRotate(scale_limit=0.5, rotate_limit=0, shift_limit=0.1, p=0.5, border_mode=0),
-        albu.GridDistortion(p=0.5),
+        # albu.Resize(320, 640),
+        # albu.HorizontalFlip(p=0.5),
+        # albu.ShiftScaleRotate(scale_limit=0.5, rotate_limit=0, shift_limit=0.1, p=0.5, border_mode=0),
+        # albu.GridDistortion(p=0.5),
         # albu.OpticalDistortion(p=0.5, distort_limit=2, shift_limit=0.5),
+
+        # fist prize's augmentation
+        albu.HorizontalFlip(p=0.5),
+        albu.VerticalFlip(p=0.5),
+        albu.ShiftScaleRotate(scale_limit=0.20, rotate_limit=10, shift_limit=0.1, p=0.5, border_mode=cv2.BORDER_CONSTANT, value=0),
+        albu.GridDistortion(p=0.5),
+        albu.RandomCrop(height=800,width=1200,p=0.5),
+        albu.Resize(320, 640),
+        albu.ChannelShuffle(),
+        albu.InvertImg(),
+        albu.ToGray(),
+        albu.Normalize(),
     ]
     return albu.Compose(train_transform)
 

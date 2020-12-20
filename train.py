@@ -15,6 +15,7 @@ import segmentation_models_pytorch as smp
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import wandb
 import time
+from datetime import datetime as dt
 
 from dataset import CloudDataset
 import utils
@@ -116,6 +117,9 @@ valid_epoch = ValidEpoch(
 
 print("start training!")
 
+output_dir = dt.now().strftime('%Y-%m-%d-%H-%M-%S')
+os.mkdir(output_dir)
+
 max_score = 0
 
 for i in range(0, num_epochs):
@@ -125,14 +129,14 @@ for i in range(0, num_epochs):
     valid_logs = valid_epoch.run(valid_loader)
     
     # do something (save model, change lr, etc.)
-    if max_score < valid_logs['iou_score']:
-        max_score = valid_logs['iou_score']
-        torch.save(model, './best_iou_model.pth')
-        print('Model saved!')
+    # if max_score < valid_logs['iou_score']:
+    #     max_score = valid_logs['iou_score']
+    #     torch.save(model, os.path.join(output_dir, 'best_iou_model.pth'))
+    #     print('Model saved!')
 
     if max_score < valid_logs['fscore']:
         max_score = valid_logs['fscore']
-        torch.save(model, './best_dice_model.pth')
+        torch.save(model, os.path.join(output_dir, 'best_dice_model.pth'))
         print('Model saved!')
         
     # if i % 1 == 0:
