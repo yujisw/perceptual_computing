@@ -57,7 +57,7 @@ preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 
 print("creating data loader...")
 
-num_workers = 0
+num_workers = 4
 bs = 16
 
 train_dataset = CloudDataset(path = path, df=train, datatype='train', img_ids=train_ids, transforms = utils.get_training_augmentation(), preprocessing = utils.get_preprocessing(preprocessing_fn))
@@ -82,7 +82,7 @@ model = smp.DeepLabV3Plus(
 )
 wandb.watch(model)
 
-num_epochs = 150
+num_epochs = 50
 logdir = "./logs/segmentation"
 
 # model, criterion, optimizer
