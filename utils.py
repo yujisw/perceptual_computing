@@ -28,7 +28,7 @@ def get_training_augmentation():
         # albu.GridDistortion(p=0.5),
         # albu.OpticalDistortion(p=0.5, distort_limit=2, shift_limit=0.5),
 
-        # fist prize's augmentation
+        # fist prize's augmentations below
         albu.HorizontalFlip(p=0.5),
         albu.VerticalFlip(p=0.5),
         albu.ShiftScaleRotate(scale_limit=0.20, rotate_limit=10, shift_limit=0.1, p=0.5, border_mode=cv2.BORDER_CONSTANT, value=0),
