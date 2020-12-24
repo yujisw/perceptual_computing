@@ -15,6 +15,7 @@ import segmentation_models_pytorch as smp
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import wandb
 import time
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 from datetime import datetime as dt
 
 from dataset import CloudDataset
@@ -30,7 +31,7 @@ print("Using", DEVICE)
 
 print("preparing data...")
 
-path = './dataset/'
+path = '/mnt/aoni04/saijo/PIS/input/understanding_cloud_organization'
 train = pd.read_csv(f'{path}/train.csv')
 sub = pd.read_csv(f'{path}/sample_submission.csv')
 
@@ -75,14 +76,33 @@ loaders = {
 print("setting for training...")
 
 ACTIVATION = None
-model = smp.DeepLabV3Plus(
+
+MODELNAME = 'PSPNet'
+if MODELNAME=='DeepLabV3Plus':
+    model = smp.DeepLabV3Plus(
     encoder_name=ENCODER, 
     encoder_weights=ENCODER_WEIGHTS, 
     classes=4, 
     activation=ACTIVATION,
 )
-wandb.watch(model)
+elif MODELNAME=='PSPNet':
+    print("model build: PSPNet")
+    model = smp.PSPNet(
+        encoder_name=ENCODER, 
+        encoder_weights=ENCODER_WEIGHTS, 
+        classes=4, 
+        activation=ACTIVATION,
+    )
+else:
+    print("model build: Unet")
+    model = smp.Unet(
+        encoder_name=ENCODER, 
+        encoder_weights=ENCODER_WEIGHTS, 
+        classes=4, 
+        activation=ACTIVATION,
+    )
 
+wandb.watch(model)
 num_epochs = 50
 logdir = "./logs/segmentation"
 

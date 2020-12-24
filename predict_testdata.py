@@ -20,7 +20,15 @@ import tqdm
 from dataset import CloudDataset
 import utils
 from loss import BCEDiceLoss, DiceLoss
-from trainer import TrainEpoch, ValidEpoch
+from trainer import TTA
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-i', '--input', type=str, default='/mnt/aoni04/saijo/PIS/input/understanding_cloud_organization')
+parser.add_argument('-m', '--model', type=str,
+                    default='/mnt/aoni04/saijo/PIS/model/DLV3+_nw4_bs16_thres0.5_1st_placed_aug/best_dice_model.pth')
+parser.add_argument('-t', '--tta', type=bool, default=False, help='true: use tta, false: not use tta')
+args = parser.parse_args()
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("Using", DEVICE)
@@ -31,7 +39,7 @@ ENCODER_WEIGHTS = 'imagenet'
 preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 
 print("creating data loader...")
-path = './dataset/'
+path = args.input
 num_workers = 0
 bs = 1
 
@@ -51,8 +59,10 @@ test_dataset = CloudDataset(
 test_loader = DataLoader(test_dataset, batch_size=bs, shuffle=False, num_workers=num_workers)
 
 print("loading state dict...")
-model_path = 'best_dice_model.pth'
+model_path = args.model
 model = torch.load(model_path)
+if args.tta:
+    tta = TTA(model, DEVICE)
 
 print("predicting...")
 
@@ -63,7 +73,10 @@ encoded_pixels = []
 image_id = 0
 for i, test_batch in enumerate(tqdm.tqdm(test_loader)):
     test_batch = {"features": test_batch[0].to(DEVICE)}
-    output = model(test_batch["features"])
+    if args.tta:
+        output = tta.batch_update(test_batch["features"])
+    else:
+        output = model(test_batch["features"])
     for i, batch in enumerate(output):
         for probability in batch:
             

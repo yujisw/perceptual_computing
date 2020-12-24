@@ -19,14 +19,14 @@ import time
 from dataset import CloudDataset
 import utils
 from loss import BCEDiceLoss, DiceLoss
-from trainer import TrainEpoch, ValidEpoch
+from trainer import TrainEpoch, ValidEpoch, TTAEpoch
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("Using", DEVICE)
 
 print("preparing data...")
 
-path = './dataset/'
+path = '/mnt/aoni04/saijo/PIS/input/understanding_cloud_organization'
 train = pd.read_csv(f'{path}/train.csv')
 sub = pd.read_csv(f'{path}/sample_submission.csv')
 
@@ -65,7 +65,7 @@ valid_loader = DataLoader(valid_dataset, batch_size=bs, shuffle=False, num_worke
 
 print("loading state dict...")
 
-model_path = 'best_dice_model.pth'
+model_path = '/mnt/aoni04/saijo/PIS/model/DLV3+_nw4_bs16_thres0.5_1st_placed_aug/best_dice_model.pth'
 model = torch.load(model_path)
 
 print("setting loss and criterion...")
@@ -86,17 +86,24 @@ valid_epoch = ValidEpoch(
     verbose=True,
 )
 
+tta_epoch = TTAEpoch(
+    model, 
+    loss=loss, 
+    metrics=metrics, 
+    device=DEVICE,
+    verbose=True,
+)
+
 print("start predicting!")
     
-train_logs = valid_epoch.run(train_loader)
-valid_logs = valid_epoch.run(valid_loader)
+# train_logs = valid_epoch.run(train_loader)
+# valid_logs = valid_epoch.run(valid_loader)
+tta_logs = tta_epoch.run(valid_loader)
 
 print("predicting ends.")
-print('Train IoU Score: ', train_logs['iou_score'])
-print('Train Dice Score:', train_logs['fscore'])
-print('Valid IoU Score: ', valid_logs['iou_score'])
-<<<<<<< HEAD
-print('Valid Dice Score:', valid_logs['fscore'])
-=======
-print('Valid Dice Score:', valid_logs['fscore'])
->>>>>>> main
+# print('Train IoU Score: ', train_logs['iou_score'])
+# print('Train Dice Score:', train_logs['fscore'])
+# print('Valid IoU Score: ', valid_logs['iou_score'])
+# print('Valid Dice Score:', valid_logs['fscore'])
+print('TTA IoU Score: ', tta_logs['iou_score'])
+print('TTA Dice Score:', tta_logs['fscore'])
