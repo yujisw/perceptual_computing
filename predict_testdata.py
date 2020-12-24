@@ -27,7 +27,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input', type=str, default='/mnt/aoni04/saijo/PIS/input/understanding_cloud_organization')
 parser.add_argument('-m', '--model', type=str,
                     default='/mnt/aoni04/saijo/PIS/model/DLV3+_nw4_bs16_thres0.5_1st_placed_aug/best_dice_model.pth')
-parser.add_argument('-t', '--tta', type=bool, default=True, help='true: use tta, false: not use tta')
+parser.add_argument('-t', '--tta', type=bool, default=False, help='true: use tta, false: not use tta')
 args = parser.parse_args()
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'

@@ -1,3 +1,5 @@
 wandb/
 dataset/
 *.pth
+.ipynb_checkpoints/
+*.csv

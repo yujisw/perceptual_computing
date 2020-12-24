@@ -95,4 +95,8 @@ print("predicting ends.")
 print('Train IoU Score: ', train_logs['iou_score'])
 print('Train Dice Score:', train_logs['fscore'])
 print('Valid IoU Score: ', valid_logs['iou_score'])
+<<<<<<< HEAD
 print('Valid Dice Score:', valid_logs['fscore'])
+=======
+print('Valid Dice Score:', valid_logs['fscore'])
+>>>>>>> main

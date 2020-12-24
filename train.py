@@ -16,6 +16,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import wandb
 import time
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+from datetime import datetime as dt
 
 from dataset import CloudDataset
 import utils
@@ -58,8 +59,8 @@ preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 
 print("creating data loader...")
 
-num_workers = 0
-bs = 4
+num_workers = 4
+bs = 16
 
 train_dataset = CloudDataset(path = path, df=train, datatype='train', img_ids=train_ids, transforms = utils.get_training_augmentation(), preprocessing = utils.get_preprocessing(preprocessing_fn))
 valid_dataset = CloudDataset(path = path, df=train, datatype='valid', img_ids=valid_ids, transforms = utils.get_validation_augmentation(), preprocessing = utils.get_preprocessing(preprocessing_fn))
@@ -77,7 +78,14 @@ print("setting for training...")
 ACTIVATION = None
 
 MODELNAME = 'PSPNet'
-if MODELNAME=='PSPNet':
+if MODELNAME=='DeepLabV3Plus':
+    model = smp.DeepLabV3Plus(
+    encoder_name=ENCODER, 
+    encoder_weights=ENCODER_WEIGHTS, 
+    classes=4, 
+    activation=ACTIVATION,
+)
+elif MODELNAME=='PSPNet':
     print("model build: PSPNet")
     model = smp.PSPNet(
         encoder_name=ENCODER, 
@@ -95,8 +103,7 @@ else:
     )
 
 wandb.watch(model)
-
-num_epochs = 150
+num_epochs = 50
 logdir = "./logs/segmentation"
 
 # model, criterion, optimizer
@@ -130,6 +137,9 @@ valid_epoch = ValidEpoch(
 
 print("start training!")
 
+output_dir = dt.now().strftime('%Y-%m-%d-%H-%M-%S')
+os.mkdir(output_dir)
+
 max_score = 0
 
 for i in range(0, num_epochs):
@@ -139,19 +149,19 @@ for i in range(0, num_epochs):
     valid_logs = valid_epoch.run(valid_loader)
     
     # do something (save model, change lr, etc.)
-    if max_score < valid_logs['iou_score']:
-        max_score = valid_logs['iou_score']
-        torch.save(model, './weights/{}/best_iou_model.pth'.format(MODELNAME))
-        print('Model saved!')
+    # if max_score < valid_logs['iou_score']:
+    #     max_score = valid_logs['iou_score']
+    #     torch.save(model, os.path.join(output_dir, 'best_iou_model.pth'))
+    #     print('Model saved!')
 
     if max_score < valid_logs['fscore']:
         max_score = valid_logs['fscore']
-        torch.save(model, './weights/{}/best_dice_model.pth'.format(MODELNAME))
+        torch.save(model, os.path.join(output_dir, 'best_dice_model.pth'))
         print('Model saved!')
         
-    if i % 1 == 0:
-        optimizer.param_groups[0]['lr'] = 1e-5
-        print('Decrease decoder learning rate to 1e-5!')
+    # if i % 1 == 0:
+    #     optimizer.param_groups[0]['lr'] = 1e-5
+    #     print('Decrease decoder learning rate to 1e-5!')
 
     wandb.log({
         "Train Loss": train_logs[loss.__name__],
