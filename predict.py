@@ -15,15 +15,11 @@ import segmentation_models_pytorch as smp
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import wandb
 import time
-from datetime import datetime as dt
 
 from dataset import CloudDataset
 import utils
 from loss import BCEDiceLoss, DiceLoss
 from trainer import TrainEpoch, ValidEpoch
-
-exp_name = time.strftime('%Y%m%d-%H%M%S')
-wandb.init(project="perceptual_computing", entity='yujisw', name=exp_name)
 
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 print("Using", DEVICE)
@@ -58,7 +54,7 @@ preprocessing_fn = smp.encoders.get_preprocessing_fn(ENCODER, ENCODER_WEIGHTS)
 
 print("creating data loader...")
 
-num_workers = 4
+num_workers = 0
 bs = 16
 
 train_dataset = CloudDataset(path = path, df=train, datatype='train', img_ids=train_ids, transforms = utils.get_training_augmentation(), preprocessing = utils.get_preprocessing(preprocessing_fn))
@@ -67,45 +63,20 @@ valid_dataset = CloudDataset(path = path, df=train, datatype='valid', img_ids=va
 train_loader = DataLoader(train_dataset, batch_size=bs, shuffle=True, num_workers=num_workers)
 valid_loader = DataLoader(valid_dataset, batch_size=bs, shuffle=False, num_workers=num_workers)
 
-loaders = {
-    "train": train_loader,
-    "valid": valid_loader
-}
+print("loading state dict...")
 
-print("setting for training...")
+model_path = 'best_dice_model.pth'
+model = torch.load(model_path)
 
-ACTIVATION = None
-model = smp.DeepLabV3Plus(
-    encoder_name=ENCODER, 
-    encoder_weights=ENCODER_WEIGHTS, 
-    classes=4, 
-    activation=ACTIVATION,
-)
-wandb.watch(model)
+print("setting loss and criterion...")
 
-num_epochs = 50
-logdir = "./logs/segmentation"
-
-# model, criterion, optimizer
-optimizer = torch.optim.Adam([
-    {'params': model.decoder.parameters(), 'lr': 1e-2}, 
-    {'params': model.encoder.parameters(), 'lr': 1e-3},  
-])
-scheduler = ReduceLROnPlateau(optimizer, factor=0.15, patience=2)
 loss = BCEDiceLoss() # or DiceLoss()
 metrics = [
-    smp.utils.metrics.Fscore(threshold=0.5), # Fscore means Dice Coefficient
-    smp.utils.metrics.IoU(threshold=0.5), # IoU means Jaccord Coefficient
+    smp.utils.metrics.Fscore(threshold=0.9), # Fscore means Dice Coefficient
+    smp.utils.metrics.IoU(threshold=0.9), # IoU means Jaccord Coefficient
 ]
 
-train_epoch = TrainEpoch(
-    model, 
-    loss=loss, 
-    metrics=metrics, 
-    optimizer=optimizer,
-    device=DEVICE,
-    verbose=True,
-)
+print("setting trainer...")
 
 valid_epoch = ValidEpoch(
     model, 
@@ -115,43 +86,13 @@ valid_epoch = ValidEpoch(
     verbose=True,
 )
 
-print("start training!")
-
-output_dir = dt.now().strftime('%Y-%m-%d-%H-%M-%S')
-os.mkdir(output_dir)
-
-max_score = 0
-
-for i in range(0, num_epochs):
+print("start predicting!")
     
-    print('\nEpoch: {}'.format(i))
-    train_logs = train_epoch.run(train_loader)
-    valid_logs = valid_epoch.run(valid_loader)
-    
-    # do something (save model, change lr, etc.)
-    # if max_score < valid_logs['iou_score']:
-    #     max_score = valid_logs['iou_score']
-    #     torch.save(model, os.path.join(output_dir, 'best_iou_model.pth'))
-    #     print('Model saved!')
+train_logs = valid_epoch.run(train_loader)
+valid_logs = valid_epoch.run(valid_loader)
 
-    if max_score < valid_logs['fscore']:
-        max_score = valid_logs['fscore']
-        torch.save(model, os.path.join(output_dir, 'best_dice_model.pth'))
-        print('Model saved!')
-        
-    # if i % 1 == 0:
-    #     optimizer.param_groups[0]['lr'] = 1e-5
-    #     print('Decrease decoder learning rate to 1e-5!')
-
-    wandb.log({
-        "Train Loss": train_logs[loss.__name__],
-        "Train IOU": train_logs['iou_score'],
-        "Train Dice": train_logs['fscore'],
-        "Valid Loss": valid_logs[loss.__name__],
-        "Valid IOU": valid_logs['iou_score'],
-        "Valid Dice": valid_logs['fscore'],
-        "max_score": max_score,
-        })
-
-print("training ends.")
-print('max_score:', max_score)
+print("predicting ends.")
+print('Train IoU Score: ', train_logs['iou_score'])
+print('Train Dice Score:', train_logs['fscore'])
+print('Valid IoU Score: ', valid_logs['iou_score'])
+print('Valid Dice Score:', valid_logs['fscore'])
