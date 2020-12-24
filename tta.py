@@ -65,7 +65,7 @@ valid_loader = DataLoader(valid_dataset, batch_size=bs, shuffle=False, num_worke
 
 print("loading state dict...")
 
-model_path = 'best_dice_model.pth'
+model_path = '/mnt/aoni04/saijo/PIS/model/DLV3+_nw4_bs16_thres0.5_1st_placed_aug/best_dice_model.pth'
 model = torch.load(model_path)
 
 print("setting loss and criterion...")
@@ -97,13 +97,13 @@ tta_epoch = TTAEpoch(
 print("start predicting!")
     
 # train_logs = valid_epoch.run(train_loader)
-valid_logs = valid_epoch.run(valid_loader)
+# valid_logs = valid_epoch.run(valid_loader)
 tta_logs = tta_epoch.run(valid_loader)
 
 print("predicting ends.")
 # print('Train IoU Score: ', train_logs['iou_score'])
 # print('Train Dice Score:', train_logs['fscore'])
-print('Valid IoU Score: ', valid_logs['iou_score'])
-print('Valid Dice Score:', valid_logs['fscore'])
+# print('Valid IoU Score: ', valid_logs['iou_score'])
+# print('Valid Dice Score:', valid_logs['fscore'])
 print('TTA IoU Score: ', tta_logs['iou_score'])
 print('TTA Dice Score:', tta_logs['fscore'])

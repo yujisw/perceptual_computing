@@ -2,6 +2,7 @@ import sys
 import torch
 from tqdm import tqdm as tqdm
 from segmentation_models_pytorch.utils.meter import AverageValueMeter
+import numpy as np
 
 class Epoch:
 
@@ -139,7 +140,7 @@ class TTAEpoch(Epoch):
             model=model,
             loss=loss,
             metrics=metrics,
-            stage_name='valid',
+            stage_name='TTA',
             device=device,
             verbose=verbose,
         )
@@ -150,16 +151,61 @@ class TTAEpoch(Epoch):
     def flip(self, x, axis):
         pred = self.model.forward(x.flip(axis).to(self.device))
         return pred.flip(axis)
+    
+    def add_noise(self, x, NUM=10000):
+        xx = x.cpu().numpy().copy()
+        b, c, h, w = xx.shape
+        pts_x = np.random.randint(0, w-1 , NUM)
+        pts_y = np.random.randint(0, h-1 , NUM)
+        pts_b = np.random.randint(0, b-1 , NUM)
+        xx = xx.transpose(0, 2, 3, 1)
+        xx[(pts_b, pts_y,pts_x)] = (255, 255, 255)
+        xx_ = torch.tensor(xx.transpose(0, 3, 1, 2))
+        pred = self.model.forward(xx_.to(self.device))
+        return pred
 
     def batch_update(self, x, y):
         with torch.no_grad():
             pred1 = self.model.forward(x)
             pred2 = self.flip(x, 2)
             pred3 = self.flip(x, 3)
-            prediction = (pred1+pred2+pred3)/3.0
+            pred4 = self.add_noise(x)
+#             prediction = (pred1+pred2+pred3)/3.0
+            prediction = (pred1+pred2+pred3+pred4)/4.0
             loss = self.loss(prediction, y)
             if self.device =='cuda':
                 loss = loss.sum()
         return loss, prediction
 
 
+class TTA():
+    def __init__(self, model, device='cpu'):
+        self.model=model
+        self.device=device        
+        self.model.eval()
+        
+    def flip(self, x, axis):
+        pred = self.model.forward(x.flip(axis).to(self.device))
+        return pred.flip(axis)
+    
+    def add_noise(self, x, NUM=10000):
+        xx = x.cpu().numpy().copy()
+        b, c, h, w = xx.shape
+        pts_x = np.random.randint(0, w-1 , NUM)
+        pts_y = np.random.randint(0, h-1 , NUM)
+        pts_b = np.random.randint(0, b-1 , NUM)
+        xx = xx.transpose(0, 2, 3, 1)
+        xx[(pts_b, pts_y,pts_x)] = (255, 255, 255)
+        xx_ = torch.tensor(xx.transpose(0, 3, 1, 2))
+        pred = self.model.forward(xx_.to(self.device))
+        return pred
+
+    def batch_update(self, x):
+        with torch.no_grad():
+            pred1 = self.model.forward(x)
+            pred2 = self.flip(x, 2)
+            pred3 = self.flip(x, 3)
+#             pred4 = self.add_noise(x)
+            prediction = (pred1+pred2+pred3)/3.0
+
+        return prediction
